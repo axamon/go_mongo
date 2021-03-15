@@ -1,0 +1,31 @@
+GET http://localhost:4747/
+
+###
+
+GET http://localhost:4747/todos
+
+###
+
+GET http://localhost:4747/todo/2d26a7b0-686c-435a-a992-b5254af6bbbb
+
+
+###
+
+PUT http://localhost:4747/todo/2d26a7b0-686c-435a-a992-b5254af6bbbb
+Content-Type: application/json
+
+{
+    "body": "nutkkkg",
+    "completed": "ok"
+}
+
+###
+
+POST http://localhost:4747/todo
+Content-Type: application/json
+
+{
+    "title": "Web",
+    "body": "jhkjhjhkj"
+}
+

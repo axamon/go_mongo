@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	guuid "github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	guuid "github.com/google/uuid"
 )
 
 type Todo struct {
@@ -42,11 +42,11 @@ func GetAllTodos(c *gin.Context) {
 	}
 
 	// Iterate through the returned cursor.
-    for cursor.Next(context.TODO()) {
-				var todo Todo
-        cursor.Decode(&todo)
-        todos = append(todos, todo)
-		}
+	for cursor.Next(context.TODO()) {
+		var todo Todo
+		cursor.Decode(&todo)
+		todos = append(todos, todo)
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":  http.StatusOK,
@@ -65,7 +65,7 @@ func CreateTodo(c *gin.Context) {
 	id := guuid.New().String()
 
 	newTodo := Todo{
-		ID: id,
+		ID:        id,
 		Title:     title,
 		Body:      body,
 		Completed: completed,
@@ -85,6 +85,7 @@ func CreateTodo(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
+		"ID":      newTodo.ID,
 		"status":  http.StatusCreated,
 		"message": "Todo created Successfully",
 	})
@@ -97,7 +98,7 @@ func GetSingleTodo(c *gin.Context) {
 	todo := Todo{}
 	err := collection.FindOne(context.TODO(), bson.M{"id": todoId}).Decode(&todo)
 	if err != nil {
-			log.Printf("Error while getting a single todo, Reason: %v\n", err)
+		log.Printf("Error while getting a single todo, Reason: %v\n", err)
 		c.JSON(http.StatusNotFound, gin.H{
 			"status":  http.StatusNotFound,
 			"message": "Todo not found",
@@ -108,7 +109,7 @@ func GetSingleTodo(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  http.StatusOK,
 		"message": "Single Todo",
-		"data": todo,
+		"data":    todo,
 	})
 	return
 }
@@ -116,22 +117,31 @@ func GetSingleTodo(c *gin.Context) {
 func EditTodo(c *gin.Context) {
 	todoId := c.Param("todoId")
 	var todo Todo
-	c.BindJSON(&todo)
-	completed := todo.Completed
+	err := collection.FindOne(context.TODO(), bson.M{"id": todoId}).Decode(&todo)
+	//c.BindJSON(&todo)
+	// newCompleted := todo.Completed
+	// newBody := todo.Body
+	//updated := time.Now().String()
 
-	newData := bson.M{
-            "$set": bson.M{
-            "completed":       completed,
-            "updated_at": time.Now(),
-            },
-        }
+	_, err = collection.DeleteOne(context.TODO(), bson.M{"id": todoId})
 
-	_, err := collection.UpdateOne(context.TODO(), bson.M{"id": todoId}, newData)
+	todo.UpdatedAt = time.Now()
+
+	// newData := bson.M{
+	// 	"$set": bson.M{
+	// 		"body":       newBody,
+	// 		"completed":  newCompleted,
+	// 		"updated_at": "$$NOW",
+	// 	},
+	// }
+
+	_, err = collection.InsertOne(context.TODO(), todo)
+
 	if err != nil {
 		log.Printf("Error, Reason: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"status": 500,
-			"message":  "Something went wrong",
+			"status":  500,
+			"message": "Something went wrong",
 		})
 		return
 	}
@@ -143,8 +153,16 @@ func EditTodo(c *gin.Context) {
 	return
 }
 
+// getUser function
+// func getUser(id string) (Todo, error) {
+// 	todo := Todo{}
+
+// 	err := collection.Find(context.TODO(), bson.M{"_id": &id}).One(&todo)
+// 	return todo, err
+// }
+
 func DeleteTodo(c *gin.Context) {
-todoId := c.Param("todoId")
+	todoId := c.Param("todoId")
 
 	_, err := collection.DeleteOne(context.TODO(), bson.M{"id": todoId})
 	if err != nil {
